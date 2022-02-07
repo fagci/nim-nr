@@ -8,20 +8,25 @@ type
     ip: string
     open: bool
 
-proc check(ip: string, port: int): Future[TargetResult] {.async.} =
+let http_port = Port(80)
+
+proc check(ip: string): Future[TargetResult] {.async.} =
   let s = newAsyncSocket()
-  let future = s.connect(ip, Port(port))
+  let future = s.connect(ip, http_port)
   yield future
 
   result = TargetResult(ip: ip, open: not future.failed)
   s.close()
-  
   if result.open: echo ip
+  
 
-var futures = newSeq[Future[TargetResult]]()
+var futures = newSeq[Future[void]]()
 
-# TODO: infinite, deal with max open files
+proc worker(): Future[void] {.async.} =
+  while true:
+    let res = await check(random_ip()).withTimeout(700)
+
 for _ in 1..1024:
-  futures.add(check(random_ip(), 80))
+  futures.add(worker())
 
-discard waitFor all(futures).withTimeout(700)
+runForever()
