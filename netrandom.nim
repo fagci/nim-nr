@@ -1,24 +1,32 @@
-import std/net
-import threadpool
+import std/asyncnet
+import asyncdispatch
 
 import ./gen
 
-proc check(ip: string, port: int): bool=
-  let s = newSocket()
-  try:
-    s.connect(ip, Port(port), 700)
-    result = true
-  except:
-    result = false
-  finally:
-    s.close()
+type
+  TargetResult = ref object
+    ip: string
+    open: bool
 
-proc check_loop() =
+let http_port = Port(80)
+
+proc check(ip: string): Future[TargetResult] {.async.} =
+  let s = newAsyncSocket()
+  let future = s.connect(ip, http_port)
+  yield future
+
+  result = TargetResult(ip: ip, open: not future.failed)
+  s.close()
+  if result.open: echo ip
+  
+
+var futures = newSeq[Future[void]]()
+
+proc worker(): Future[void] {.async.} =
   while true:
-    var ip = random_ip()
-    if check(ip, 80):
-      echo ip
+    let res = await check(random_ip()).withTimeout(700)
 
-for i in 1..128:
-  spawn check_loop()
+for _ in 1..1024:
+  futures.add(worker())
 
+runForever()
