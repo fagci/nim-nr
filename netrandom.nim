@@ -51,6 +51,6 @@ proc worker(): Future[void] {.async.} =
 var futures = newSeq[Future[void]]()
 
 for _ in 1..WORKERS:
-  futures.add(worker())
+  futures.add worker()
 
 waitFor all(futures)
