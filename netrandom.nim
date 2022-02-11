@@ -23,24 +23,16 @@ proc check(ip: string): Future[void] {.async.} =
 
   yield fut.withTimeout(CONN_TIMEOUT)
 
-  if fut.failed:
-    s.close()
-    return
+  if not fut.failed:
+    fut = s.send(MSG_T.fmt)
+    yield fut.withTimeout(SEND_TIMEOUT)
 
-  fut = s.send(MSG_T.fmt)
-  yield fut.withTimeout(SEND_TIMEOUT)
+    if not fut.failed:
+      let body = s.recv(BODY_LEN)
 
-  if fut.failed:
-    s.close()
-    return
-
-  let body = s.recv(BODY_LEN)
-  if not await body.withTimeout(RECV_TIMEOUT):
-    s.close()
-    return
-
-  if "Index of" in body.read():
-    echo &"http://{ip}{PATH}"
+      if await body.withTimeout(RECV_TIMEOUT):
+        if "Index of" in body.read():
+          echo &"http://{ip}{PATH}"
 
   s.close()
 
