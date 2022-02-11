@@ -29,6 +29,7 @@ proc check(ip: string): Future[void] {.async.} =
 
     if not fut.failed:
       let body = s.recv(BODY_LEN)
+
       if await body.withTimeout(RECV_TIMEOUT):
         if "Index of" in body.read():
           echo &"http://{ip}{PATH}"
