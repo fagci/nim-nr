@@ -1,26 +1,33 @@
-import std/asyncdispatch
-import std/asyncnet
-import std/strformat
-import std/strutils
+import asyncdispatch
+import asyncnet
+import strformat
+import strutils
 
 import ./gen
 
-const PATH = "/wp-content/uploads/"
+const
+  PATH = "/wp-content/uploads/"
 
-const CONN_TIMEOUT = 300
-const SEND_TIMEOUT = 700
-const RECV_TIMEOUT = 2000
-const BODY_LEN = 1024
-const WORKERS = 2048
+  CONN_TIMEOUT = 300
+  SEND_TIMEOUT = 700
+  RECV_TIMEOUT = 2000
+  BODY_LEN = 1024
+  WORKERS = 2048
 
-const PORT = 80.Port
-const MSG_T = "GET " & PATH & " HTTP/1.1\r\nHost: {ip}\r\n\r\n"
+  PORT = 80.Port
+  OUTPUT_T = "http://{{ip}}{PATH}".fmt
+
+const MSG_T = [
+  "GET {PATH} HTTP/1.1",
+  "Host: {{ip}}",
+  "User-Agent: Mozilla/5.0",
+].join("\r\n").fmt & "\r\n\r\n"
+
 
 proc check(ip: string): Future[void] {.async.} =
   let s = newAsyncSocket()
 
   var fut = s.connect(ip, PORT)
-
   yield fut.withTimeout(CONN_TIMEOUT)
 
   if not fut.failed:
@@ -32,13 +39,15 @@ proc check(ip: string): Future[void] {.async.} =
 
       if await body.withTimeout(RECV_TIMEOUT):
         if "Index of" in body.read():
-          echo &"http://{ip}{PATH}"
+          echo OUTPUT_T.fmt
 
   s.close()
+
 
 proc worker(): Future[void] {.async.} =
   while true:
     yield check random_ip()
+
 
 var futures = newSeq[Future[void]]()
 

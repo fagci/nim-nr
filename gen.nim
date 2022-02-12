@@ -3,11 +3,13 @@ import std/random
 
 randomize()
 
+const RAND_RANGE = 0'u32..0xD0000000'u32
+
 proc random_ip*(): string =
   var intip: uint32
 
   while true:
-    intip = rand(0'u32..0xD0000000'u32) + 0xFFFFFF
+    intip = rand(RAND_RANGE) + 0xFFFFFF
     if not (
       (intip >= 0x0A000000'u32 and intip <= 0x0AFFFFFF'u32) or
       (intip >= 0x64400000'u32 and intip <= 0x647FFFFF'u32) or
